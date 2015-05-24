@@ -776,7 +776,7 @@ void VigirManipulationController::sendFinalGrasp(geometry_msgs::PoseStamped fina
     move_goal.request.group_name                                           = this->planning_group_;
     move_goal.request.allowed_planning_time                                = 1.0;
     move_goal.request.num_planning_attempts                                = 1;
-    move_goal.request.max_velocity_scaling_factor                          = 0.1;
+    move_goal.request.max_velocity_scaling_factor                          = 0.5;
 
     move_goal.extended_planning_options.target_frame = final_grasp.header.frame_id;
     move_goal.extended_planning_options.target_poses.push_back(final_grasp.pose);
