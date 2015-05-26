@@ -33,9 +33,7 @@ namespace vigir_manipulation_controller{
 VigirManipulationController::VigirManipulationController():
     wrist_name_( "unknown"),
     hand_side_( "unknown"),
-    hand_id_(0),
-    l_arm_group_("l_arm_group"),
-    r_arm_group_("r_arm_group")
+    hand_id_(0)
 {
     //Stitch template to hand transformation initialization
     this->palmStitch_T_hand_.setIdentity();
@@ -291,7 +289,7 @@ void VigirManipulationController::templateStitchCallback(const flor_grasp_msgs::
             }
 
             if(index >= template_srv_.response.template_type_information.grasps.size()){
-                ROS_ERROR("Grasp id:%d not found while request attaching. Returning Identity as stitch pose", grasp_msg.grasp_id.data);
+                ROS_ERROR("Grasp id:%d not found while request attaching. Not Attaching", grasp_msg.grasp_id.data);
             }else{
                 //Wrist pose in world frame
                 world_T_hand.setRotation(tf::Quaternion(this->last_wrist_pose_msg_.pose.orientation.x,
@@ -317,31 +315,31 @@ void VigirManipulationController::templateStitchCallback(const flor_grasp_msgs::
                 stitch_template_pose.header.frame_id = template_srv_.response.template_state_information.pose.header.frame_id;
                 stitch_template_pose.header.seq++;
                 stitch_template_pose.header.stamp = template_srv_.response.template_state_information.pose.header.stamp;
+
+                //Publish to OCS
+                if (template_stitch_pose_pub_)
+                {
+                    flor_grasp_msgs::TemplateSelection last_template_data;
+                    last_template_data.template_id = grasp_msg.template_id;
+                    this->setStitchingObject(last_template_data); //Stitching collision object to robot
+
+                    stitch_template_pose.pose.position.x = this->palmStitch_T_hand_.getOrigin().getX();
+                    stitch_template_pose.pose.position.y = this->palmStitch_T_hand_.getOrigin().getY();
+                    stitch_template_pose.pose.position.z = this->palmStitch_T_hand_.getOrigin().getZ();
+                    stitch_template_pose.pose.orientation.w = this->palmStitch_T_hand_.getRotation().getW();
+                    stitch_template_pose.pose.orientation.x = this->palmStitch_T_hand_.getRotation().getX();
+                    stitch_template_pose.pose.orientation.y = this->palmStitch_T_hand_.getRotation().getY();
+                    stitch_template_pose.pose.orientation.z = this->palmStitch_T_hand_.getRotation().getZ();
+
+                    template_stitch_pose_pub_.publish(stitch_template_pose);
+                }
+                else
+                    ROS_WARN("Invalid template stitch pose publisher");
+
             }
         }else{
-            ROS_ERROR("Palm not in /world frame, need to detach. Returning Identity as the stitch pose.");
-        }
-
-        //Publish to OCS
-        if (template_stitch_pose_pub_)
-        {
-            flor_grasp_msgs::TemplateSelection last_template_data;
-            last_template_data.template_id = grasp_msg.template_id;
-            this->setStitchingObject(last_template_data); //Stitching collision object to robot
-
-            stitch_template_pose.pose.position.x = this->palmStitch_T_hand_.getOrigin().getX();
-            stitch_template_pose.pose.position.y = this->palmStitch_T_hand_.getOrigin().getY();
-            stitch_template_pose.pose.position.z = this->palmStitch_T_hand_.getOrigin().getZ();
-            stitch_template_pose.pose.orientation.w = this->palmStitch_T_hand_.getRotation().getW();
-            stitch_template_pose.pose.orientation.x = this->palmStitch_T_hand_.getRotation().getX();
-            stitch_template_pose.pose.orientation.y = this->palmStitch_T_hand_.getRotation().getY();
-            stitch_template_pose.pose.orientation.z = this->palmStitch_T_hand_.getRotation().getZ();
-
-            template_stitch_pose_pub_.publish(stitch_template_pose);
-        }
-        else
-            ROS_WARN("Invalid template stitch pose publisher");
-
+            ROS_ERROR("Palm not in /world frame, need to detach. Not Attaching.");
+        }        
     }
 }
 
@@ -824,6 +822,7 @@ void VigirManipulationController::sendCircularAffordance(vigir_object_template_m
     move_goal.extended_planning_options.avoid_collisions                   = false;
     move_goal.extended_planning_options.keep_endeffector_orientation       = affordance.keep_orientation;
     move_goal.extended_planning_options.rotation_angle                     = affordance.displacement;
+    move_goal.extended_planning_options.pitch                              = affordance.pitch;
     move_goal.extended_planning_options.execute_incomplete_cartesian_plans = true;
     move_goal.request.group_name                                           = this->planning_group_;
     move_goal.request.allowed_planning_time                                = 1.0;

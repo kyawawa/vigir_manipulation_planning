@@ -103,6 +103,15 @@ void move_group::MoveGroupManipulationAction::initialize()
 
 }
 
+bool move_group::MoveGroupManipulationAction::checkGroupStateSelfCollisionFree(robot_state::RobotState *robot_state, const robot_state::JointModelGroup *joint_group, const double *joint_group_variable_values)
+{
+    collision_detection::CollisionRequest request;
+    collision_detection::CollisionResult result;
+    robot_state->setJointGroupPositions(joint_group, joint_group_variable_values);
+    context_->planning_scene_monitor_->getPlanningScene()->checkSelfCollision(request, result, *robot_state);
+    return !result.collision;
+}
+
 void move_group::MoveGroupManipulationAction::executeMoveCallback(const vigir_planning_msgs::MoveGoalConstPtr& goal)
 {
   setMoveState(PLANNING);
@@ -291,7 +300,8 @@ void move_group::MoveGroupManipulationAction::executeMoveCallback(const vigir_pl
             found_ik = group_utils::setJointModelGroupFromIk(tmp,
                                                              joint_model_group,
                                                              goal_pose_planning_frame.pose,
-                                                             new_goal->request.path_constraints.joint_constraints);
+                                                             new_goal->request.path_constraints.joint_constraints,
+                                                             boost::bind(&MoveGroupManipulationAction::checkGroupStateSelfCollisionFree, this, _1, _2, _3));
 
             if (found_ik){
               goal_constraints = kinematic_constraints::constructGoalConstraints(tmp, joint_model_group);
@@ -724,7 +734,8 @@ void move_group::MoveGroupManipulationAction::executeMoveCallback_DrakeCircularM
                                                       pose_vec,
                                                       0.2,
                                                       goal->extended_planning_options.rotation_angle,
-                                                      goal->extended_planning_options.keep_endeffector_orientation);
+                                                      goal->extended_planning_options.keep_endeffector_orientation,
+                                                      goal->extended_planning_options.pitch);
 
         // make a copy of goal, so I can modify it
         vigir_planning_msgs::MoveGoalPtr new_goal( new vigir_planning_msgs::MoveGoal( *goal ) );
@@ -824,7 +835,8 @@ void move_group::MoveGroupManipulationAction::executeCartesianMoveCallback_PlanA
                                                     pose_vec,
                                                     0.2,
                                                     goal->extended_planning_options.rotation_angle,
-                                                    goal->extended_planning_options.keep_endeffector_orientation);
+                                                    goal->extended_planning_options.keep_endeffector_orientation,
+                                                    goal->extended_planning_options.pitch);
     }
   }
 
@@ -1147,7 +1159,8 @@ bool move_group::MoveGroupManipulationAction::planCircularMotionUsingDrake(const
                                                           pose_vec,
                                                           0.2,
                                                           goal->extended_planning_options.rotation_angle,
-                                                          goal->extended_planning_options.keep_endeffector_orientation);
+                                                          goal->extended_planning_options.keep_endeffector_orientation,
+                                                          goal->extended_planning_options.pitch);
 
           // make a copy of goal, so I can modify it
           vigir_planning_msgs::MoveGoalPtr new_goal( new vigir_planning_msgs::MoveGoal( *goal ) );
