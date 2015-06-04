@@ -339,7 +339,7 @@ void VigirManipulationController::templateStitchCallback(const flor_grasp_msgs::
             }
         }else{
             ROS_ERROR("Palm not in /world frame, need to detach. Not Attaching.");
-        }        
+        }
     }
 }
 
@@ -908,6 +908,8 @@ void VigirManipulationController::sendCartesianAffordance(vigir_object_template_
     affordance.waypoints[0].pose.position.x *= affordance.displacement;
     affordance.waypoints[0].pose.position.y *= affordance.displacement;
     affordance.waypoints[0].pose.position.z *= affordance.displacement;
+                                                      // This is a major HACK!
+    affordance.waypoints[0].pose.position.x += 0.185; // Unexplained offset from wrist to palm frame on Escher.
 
 
     if(affordance.waypoints[0].header.frame_id == "/world"){
